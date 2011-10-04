@@ -5,26 +5,31 @@ module Babushka
     include PathHelpers
 
     def hostname
+      deprecated_helper!
       shell 'hostname -f'
     end
 
     def rake cmd, &block
+      deprecated_helper!
       sudo "rake #{cmd} RAILS_ENV=#{var :app_env}", :as => var(:username), &block
     end
 
     def bundle_rake cmd, &block
+      deprecated_helper!
       cd var(:rails_root) do
         shell "bundle exec rake #{cmd} --trace RAILS_ENV=#{var :app_env}", :as => var(:username), :log => true, &block
       end
     end
 
     def check_file file_name, method_name
+      deprecated_helper!
       File.send(method_name, file_name).tap {|result|
         log_error "#{file_name} failed #{method_name.to_s.sub(/[?!]$/, '')} check." unless result
       }
     end
 
     def grep pattern, file
+      deprecated_helper!
       if (path = file.p).exists?
         output = if pattern.is_a? String
           path.readlines.select {|l| l[pattern] }
@@ -36,6 +41,7 @@ module Babushka
     end
 
     def change_line line, replacement, filename
+      deprecated_helper!
       path = filename.p
 
       log "Patching #{path}"
@@ -45,6 +51,7 @@ module Babushka
     end
 
     def insert_into_file insert_before, path, lines, opts = {}
+      deprecated_helper!
       opts.defaults! :comment_char => '#', :insert_after => nil
       nlines = lines.split("\n").length
       before, after = path.p.readlines.cut {|l| l.strip == insert_before.strip }
@@ -70,6 +77,7 @@ module Babushka
     end
 
     def sed
+      deprecated_helper!
       Base.host.linux? ? 'sed' : 'gsed'
     end
 
@@ -103,6 +111,7 @@ module Babushka
     end
 
     def yaml path
+      deprecated_helper!
       require 'yaml'
       YAML.load_file path.p
     end
@@ -132,14 +141,24 @@ module Babushka
     end
 
     def log_and_open message, url
+      deprecated_helper!
       log "#{message} Hit Enter to open the download page.", :newline => false
       read_from_prompt ' '
       shell "open #{url}"
     end
 
     def mysql cmd, username = 'root', include_password = true
+      deprecated_helper!
       password_segment = "--password='#{var :db_password}'" if include_password
       shell "echo \"#{cmd.gsub('"', '\"').end_with(';')}\" | mysql -u #{username} #{password_segment}"
+    end
+    
+  private
+  
+    def deprecated_helper!
+      helper_name = caller.first.scan(/in `(\w+)'/).flatten.first
+      log_warn "The ##{helper_name} helper method has been deprecated with no replacement. I'm cleaning"
+      log_warn "up Babushka::RunHelpers, because it's messy and included in all deps."
     end
   end
 end

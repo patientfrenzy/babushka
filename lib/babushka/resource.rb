@@ -107,8 +107,7 @@ module Babushka
       shell("mkdir -p '#{name}'") and
       cd(name) {
         unless log_shell("Extracting #{filename}", extract_command)
-          log_error "Couldn't extract #{path}."
-          log "(The file is probably corrupt - maybe the download was cancelled before it finished?)"
+          log_error "Couldn't extract #{path} - probably a bad download."
         else
           cd(content_subdir) {
             block.nil? or block.call(self)
@@ -128,9 +127,14 @@ module Babushka
     end
 
     def identity_dirs
-      Dir.glob('*/').map {|dir| dir.chomp('/') }.select {|dir|
-        dir.downcase.gsub(/[ \-_\.]/, '') == name.downcase.gsub(/[ \-_\.]/, '')
-      }
+      everything = Dir.glob('*')
+      if everything.length == 1 && File.directory?(everything.first)
+        everything
+      else
+        Dir.glob('*/').map {|dir| dir.chomp('/') }.select {|dir|
+          dir.downcase.gsub(/[ \-_\.]/, '') == name.downcase.gsub(/[ \-_\.]/, '')
+        }
+      end
     end
 
     def archive_prefix
